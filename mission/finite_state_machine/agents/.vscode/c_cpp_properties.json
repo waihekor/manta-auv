@@ -1,0 +1,35 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "",
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "includePath": [
+        "/home/ola/manta_ws/devel/include/**",
+        "/home/ola/turtlebot_ws/devel/include/**",
+        "/home/ola/myturtlebot_ws/devel/include/**",
+        "/opt/ros/kinetic/include/**",
+        "/home/ola/manta_ws/src/Manta-AUV/control/dp_controller/include/**",
+        "/home/ola/manta_ws/src/Manta-AUV/perception/gate_detect/include/**",
+        "/home/ola/manta_ws/src/Manta-AUV/control/mcu_interface/include/**",
+        "/home/ola/turtlebot_ws/src/oa_pathfinder/include/**",
+        "/home/ola/turtlebot_ws/src/oa_test_pkg/include/**",
+        "/home/ola/manta_ws/src/Manta-AUV/perception/pole_detect/include/**",
+        "/home/ola/manta_ws/src/Manta-AUV/localization/robot_localization/include/**",
+        "/home/ola/turtlebot_ws/src/rosservice/server/include/**",
+        "/home/ola/manta_ws/src/Manta-AUV/localization/underwater_odom/include/**",
+        "/home/ola/manta_ws/src/uuv-simulator/uuv_gazebo_plugins/uuv_gazebo_plugins/include/**",
+        "/home/ola/manta_ws/src/uuv-simulator/uuv_gazebo_plugins/uuv_gazebo_ros_plugins/include/**",
+        "/home/ola/manta_ws/src/uuv-simulator/uuv_sensor_plugins/uuv_sensor_ros_plugins/include/**",
+        "/home/ola/manta_ws/src/uuv-simulator/uuv_world_plugins/uuv_world_plugins/include/**",
+        "/home/ola/manta_ws/src/uuv-simulator/uuv_world_plugins/uuv_world_ros_plugins/include/**",
+        "/home/ola/manta_ws/src/Manta-AUV/control/vortex/include/**",
+        "/home/ola/manta_ws/src/Manta-AUV/control/vortex_allocator/include/**",
+        "/home/ola/manta_ws/src/Manta-AUV/control/vortex_controller/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS"
+    }
+  ]
+}
