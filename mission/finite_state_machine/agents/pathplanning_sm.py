@@ -28,23 +28,28 @@ def make_los_goal(x_prev, y_prev, x_next, y_next, depth, speed=0.20, sphere_of_a
 
     los_goal.forward_speed.linear.x = speed
     los_goal.sphereOfAcceptance = sphere_of_acceptance
+    return los_goal
 
 
 class TaskManager():
-    
+
     def __init__(self):
+
 
         rospy.init_node('pathplanning_sm', anonymous=False)
 
-        rospy.on_shutdown(self.shutdown)
+        #rospy.on_shutdown(self.shutdown)
 
         patrol = StateMachine([])
+
+        print("sm init")
+
 
         with patrol:
             StateMachine.add(   'CP1',
                                 SimpleActionState(  'los_path',
                                                     LosPathFollowingAction,
-                                                    make_los_goal(2.0, 2.0, 4.0, 4.0, -0.5)),
+                                                    make_los_goal(0.0, 0.0, 4.0, 4.0, -0.5)),
                                 transitions = { 'succeeded': 'CP2',
                                                 'aborted': 'CP1',
                                                 'preempted': 'CP2'})
@@ -52,7 +57,7 @@ class TaskManager():
             StateMachine.add(   'CP2',
                                 SimpleActionState(  'los_path',
                                                     LosPathFollowingAction,
-                                                    make_los_goal(4.0, 4.0, 2.0, 2.0, -0.5)),
+                                                    make_los_goal(4.0, 4.0, 0.0, 0.0, -0.5)),
                                 transitions = { 'succeeded': 'CP1',
                                                 'aborted': 'CP2',
                                                 'preempted': 'CP1'})
@@ -61,8 +66,13 @@ class TaskManager():
         intro_server = IntrospectionServer(str(rospy.get_name()), patrol,'/SM_ROOT')
         intro_server.start()
         patrol.execute()
+        print("State machine execute finished")
         intro_server.stop()
+        rospy.spin()
 
+    def shutdown(self):
+        rospy.loginfo("stopping the AUV...")
+        rospy.sleep(10)
 
 
 if __name__ == '__main__':
