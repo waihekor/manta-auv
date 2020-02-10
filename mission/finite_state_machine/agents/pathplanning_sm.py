@@ -11,8 +11,8 @@ import actionlib
 from vortex_msgs.msg import LosPathFollowingAction, LosPathFollowingGoal, LosPathFollowingResult, LosPathFollowingFeedback
 from actionlib_msgs.msg import GoalStatus
 from geometry_msgs.msg import Pose, Point, Quaternion
-
-from tf.transformations import quaternion_from_euler
+from nav_msgs.msg import OccupancyGrid, Odometry
+from tf.transformations import quaternion_from_euler, euler_from_quaternion
 
 
 class Foo(State):
@@ -61,6 +61,12 @@ class TaskManager():
 
         rospy.init_node('pathplanning_sm', anonymous=False)
 
+        
+
+        self.vehicle_odom = Odometry()
+        #self.sub_pose = rospy.Subscriber('/odometry/filtered', Odometry, self.positionCallback, queue_size=1)
+        subscrib_map = rospy.Subscriber('/map', OccupancyGrid, self.mapCB, queue_size=1)
+
 
         patrol = StateMachine(outcomes = ["outcome_patrol"])
 
@@ -71,7 +77,7 @@ class TaskManager():
             StateMachine.add(   'CP1',
                                 SimpleActionState(  'los_path',
                                                     LosPathFollowingAction,
-                                                    make_los_goal(0.0, 0.0, 9.0, 2.0, -0.5)),
+                                                    make_los_goal(0.0, 0.0, -9.0, 0.0, -0.5)),
                                 transitions = { 'succeeded': 'CP2',
                                                 'aborted': 'CP1',
                                                 'preempted': 'CP2'})
@@ -79,7 +85,7 @@ class TaskManager():
             StateMachine.add(   'CP2',
                                 SimpleActionState(  'los_path',
                                                     LosPathFollowingAction,
-                                                    make_los_goal(4.0, 4.0, 0.0, 0.0, -0.5)),
+                                                    make_los_goal(-9.0, 0.0, 0.0, 0.0, -0.5)),
                                 transitions = { 'succeeded': 'CP1',
                                                 'aborted': 'CP2',
                                                 'preempted': 'CP1'})
@@ -107,6 +113,37 @@ class TaskManager():
     def shutdown(self):
         rospy.loginfo("stopping the AUV...")
         rospy.sleep(10)
+
+    def mapCB(self, msg):
+        self.occ_grid = msg
+        self.get_grid_index(self.occ_grid, self.vehicle_odom)
+
+    """
+    def positionCallback(self, msg):
+        self.vehicle_odom = msg
+        self.time = msg.header.stamp.to_sec()
+        global roll, pitch, yaw
+        orientation_q = msg.pose.pose.orientation
+        orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
+        (roll,pitch,yaw) = euler_from_quaternion(orientation_list)
+        self.psi = yaw
+        """
+
+    def get_grid_index(self, occ_map, manta_pos):
+        width = occ_map.info.width
+        height = occ_map.info.height
+        resolution = occ_map.info.resolution
+        origin = occ_map.info.origin.position
+
+        
+        
+        manta_grid_pos_x = manta_pos.pose.pose.position.x / resolution
+        manta_grid_pos_y = manta_pos.pose.pose.position.y / resolution
+
+
+        
+
+
 
 
 

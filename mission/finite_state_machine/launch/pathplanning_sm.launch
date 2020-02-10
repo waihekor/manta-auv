@@ -10,4 +10,11 @@
     output="screen">
    </node> 
 
+   <node
+    name="get_map_test"
+    pkg="finite_state_machine"
+    type="get_map_test.py"
+    output="screen">
+   </node> 
+
 </launch>
