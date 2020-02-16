@@ -14,28 +14,39 @@ from geometry_msgs.msg import Pose, Point, Quaternion, PoseStamped
 from nav_msgs.msg import OccupancyGrid, Odometry
 from nav_msgs.srv import GetPlan, GetMap
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
+from visualization_msgs.msg import Marker, MarkerArray
 
 
-class Foo(State):
+class Init_state(State):
     def __init__(self):
-        State.__init__(self, outcomes = ["outcome1", "outcome3"])
+        State.__init__(self, outcomes = ["first_state"])
     
     def execute(self, userdata):
-        print("Starting state Foo")
-        rospy.sleep(3)
-        print("Waited 3 seconds")
-        return "outcome3"
+        print("Starting state Init_state")
 
-class Bar(State):
+        return "first_state"
+
+class Init_point_1(State):
     
     def __init__(self):
-        State.__init__(self, outcomes = ["outcome2"])
+        State.__init__(self, outcomes = ["succeded"])
     
     def execute(self, userdata):
-        print("Starting state Bar")
-        rospy.sleep(2)
-        print("Waited 2 seconds")
-        return "outcome2"
+        print("Starting state init_point_1")
+        return "succeded"
+
+class Init_point_0(State):
+    
+    def __init__(self, service_func):
+        State.__init__(self, outcomes = ["succeded"])
+
+        self.service_func = service_func
+    
+    def execute(self, userdata):
+        self.service_func()
+        print("Starting state init_point_0")
+        return "succeded"
+
 
 def make_los_goal(x_prev, y_prev, x_next, y_next, depth, speed=0.20, sphere_of_acceptance=0.5):
     
@@ -61,54 +72,45 @@ class TaskManager():
         self.psi = 0
 
 
-
-
-
         rospy.init_node('pathplanning_sm', anonymous=False)
 
-        
+        self.marker_arr = MarkerArray()
 
         self.vehicle_odom = Odometry()
-        #self.sub_pose = rospy.Subscriber('/odometry/filtered', Odometry, self.positionCallback, queue_size=1)
+        self.sub_pose = rospy.Subscriber('/odometry/filtered', Odometry, self.positionCallback, queue_size=1)
         subscrib_map = rospy.Subscriber('/map', OccupancyGrid, self.mapCB, queue_size=1)
 
-
-        patrol = StateMachine(outcomes = ["outcome_patrol"])
-
-        print("sm init")
+        self.marker_pub = rospy.Publisher('/testing/markerArray', MarkerArray, queue_size=50)
+        self.drawMarkersTest()
 
 
-        with patrol:
-            StateMachine.add(   'CP1',
-                                SimpleActionState(  'los_path',
-                                                    LosPathFollowingAction,
-                                                    make_los_goal(0.0, 0.0, -9.0, 0.0, -0.5)),
-                                transitions = { 'succeeded': 'CP2',
-                                                'aborted': 'CP1',
-                                                'preempted': 'CP2'})
-            
-            StateMachine.add(   'CP2',
-                                SimpleActionState(  'los_path',
-                                                    LosPathFollowingAction,
-                                                    make_los_goal(-9.0, 0.0, 0.0, 0.0, -0.5)),
-                                transitions = { 'succeeded': 'CP1',
-                                                'aborted': 'CP2',
-                                                'preempted': 'CP1'})
-
-        #rospy.on_shutdown(self.shutdown)
-
-        hsm = StateMachine([])
+        hsm = StateMachine(outcomes=['finished statemachine'])
+        
         with hsm:
-            StateMachine.add('FOO', Foo(), transitions={"outcome1": 'BAR', "outcome3": 'BAS'})
-            StateMachine.add('BAR', Bar(), transitions={"outcome2": 'FOO'})
-            StateMachine.add('BAS', patrol, transitions={"outcome_patrol": 'BAR'})
+            StateMachine.add('INIT', Init_state(), transitions={"first_state": 'INIT_GO_TO_POINT_1'})
+            StateMachine.add('INIT_GO_TO_POINT_1', Init_point_1(), transitions={ "succeded": 'GO_TO_POINT_1' })
+            StateMachine.add(   'GO_TO_POINT_1',
+                        SimpleActionState(  'los_path',
+                                            LosPathFollowingAction,
+                                            make_los_goal(0.0, 0.0, 2, 0.0, -0.5)),
+                                            transitions = { "succeeded": 'INIT_GO_TO_POINT_0',
+                                                            "preempted": 'INIT_GO_TO_POINT_0', 
+                                                            "aborted": 'INIT_GO_TO_POINT_0' })   
+            StateMachine.add('INIT_GO_TO_POINT_0', Init_point_0(self.serviceSetup), transitions={ "succeded": 'GO_TO_POINT_0'})      
+            StateMachine.add(   'GO_TO_POINT_0',
+                         SimpleActionState( 'los_path',
+                                            LosPathFollowingAction,
+                                            make_los_goal(2, 0.0, 0.0, 0.0, -0.5)),
+                                            transitions = { 'succeeded': 'INIT_GO_TO_POINT_1',
+                                                            "preempted": 'INIT_GO_TO_POINT_1', 
+                                                            "aborted": 'INIT_GO_TO_POINT_1' })  
             
         hsm.execute()
 
         
 
 
-        intro_server = IntrospectionServer(str(rospy.get_name()), patrol,'/SM_ROOT')
+        intro_server = IntrospectionServer(str(rospy.get_name()), hsm,'/SM_ROOT')
         intro_server.start()
         #patrol.execute()
         print("State machine execute finished")
@@ -132,6 +134,9 @@ class TaskManager():
         orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
         (roll,pitch,yaw) = euler_from_quaternion(orientation_list)
         self.psi = yaw
+
+        #test:
+        self.drawMarkersTest()
         
 
     def get_grid_index(self, occ_map, manta_pos):
@@ -154,16 +159,28 @@ class TaskManager():
 
         start = PoseStamped()
         goal = PoseStamped()
-        start.header.frame_id = "world"
+        start.header.frame_id = "manta/odom"
         start.pose.position.x = 0
         start.pose.position.y = 0
-        start.pose.position.z = -0.5
+        start.pose.position.z = 0
 
-        goal.pose.position.x = 3
-        goal.pose.position.y = 0
-        goal.pose.position.z = -0.5
+        goal.header.frame_id = "manta/odom"
+        goal.pose.position.x = -20
+        goal.pose.position.y = 3
+        goal.pose.position.z = 0
 
         tolerance = 0
+
+
+
+        
+
+        print("Start:")
+        print(start)
+        print("Goal: ")
+        print(goal)
+
+
         plan_response = get_plan(start = start, goal = goal, tolerance = tolerance)
         print("Plan response type: ")
         print(type(plan_response))
@@ -172,24 +189,51 @@ class TaskManager():
 
         print("Lengde: array ", len(poses_arr))
 
+
+        self.marker_arr = MarkerArray()
+        
+        id = 0
+
         for poses in poses_arr:
-            print("hei")
-            print(poses)
+            id = id + 1
+            marker = Marker()
+            marker.id = id
+            marker.header.frame_id = "manta/odom"
+            marker.type = marker.SPHERE
+            marker.action = marker.ADD
+            marker.scale.x = 0.2
+            marker.scale.y = 0.2
+            marker.scale.z = 0.2
+            marker.color.a = 1.0
+            marker.color.r = 1.0
+            marker.color.g = 1.0
+            marker.color.b = 0.0
+            marker.pose.orientation.w = 1.0
+
+            print(poses.pose.position)
+
+            marker.pose.position.x = poses.pose.position.x
+            marker.pose.position.y = poses.pose.position.y
+            marker.pose.position.z = poses.pose.position.z
+            self.marker_arr.markers.append(marker)
 
         
+            
+            
 
 
+    def drawMarkersTest(self):
+
+        print("length of marker array: ", len(self.marker_arr.markers))
+        self.marker_pub.publish(self.marker_arr)
 
 
 
     
-
     
-        
 
 
 if __name__ == '__main__':
-    
 	try:
 		TaskManager()
 	except rospy.ROSInterruptException:
