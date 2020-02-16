@@ -10,13 +10,13 @@ from smach_ros import SimpleActionState, MonitorState, IntrospectionServer
 import actionlib
 from vortex_msgs.msg import LosPathFollowingAction, LosPathFollowingGoal, LosPathFollowingResult, LosPathFollowingFeedback
 from actionlib_msgs.msg import GoalStatus
-from geometry_msgs.msg import Pose, Point, Quaternion
+from geometry_msgs.msg import Pose, Point, Quaternion, PoseStamped
 from nav_msgs.msg import OccupancyGrid, Odometry
+from nav_msgs.srv import GetPlan, GetMap
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
 
 
 class Foo(State):
-    
     def __init__(self):
         State.__init__(self, outcomes = ["outcome1", "outcome3"])
     
@@ -57,6 +57,11 @@ def make_los_goal(x_prev, y_prev, x_next, y_next, depth, speed=0.20, sphere_of_a
 class TaskManager():
 
     def __init__(self):
+
+        self.psi = 0
+
+
+
 
 
         rospy.init_node('pathplanning_sm', anonymous=False)
@@ -118,7 +123,7 @@ class TaskManager():
         self.occ_grid = msg
         self.get_grid_index(self.occ_grid, self.vehicle_odom)
 
-    """
+    
     def positionCallback(self, msg):
         self.vehicle_odom = msg
         self.time = msg.header.stamp.to_sec()
@@ -127,7 +132,7 @@ class TaskManager():
         orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
         (roll,pitch,yaw) = euler_from_quaternion(orientation_list)
         self.psi = yaw
-        """
+        
 
     def get_grid_index(self, occ_map, manta_pos):
         width = occ_map.info.width
@@ -140,6 +145,36 @@ class TaskManager():
         manta_grid_pos_x = manta_pos.pose.pose.position.x / resolution
         manta_grid_pos_y = manta_pos.pose.pose.position.y / resolution
 
+    def serviceSetup(self):
+
+        print("waiting for service")
+        rospy.wait_for_service('move_base_node/make_plan')
+        print("finished waiting for service")
+        get_plan = rospy.ServiceProxy('/move_base_node/make_plan', GetPlan)
+
+        start = PoseStamped()
+        goal = PoseStamped()
+        start.header.frame_id = "world"
+        start.pose.position.x = 0
+        start.pose.position.y = 0
+        start.pose.position.z = -0.5
+
+        goal.pose.position.x = 3
+        goal.pose.position.y = 0
+        goal.pose.position.z = -0.5
+
+        tolerance = 0
+        plan_response = get_plan(start = start, goal = goal, tolerance = tolerance)
+        print("Plan response type: ")
+        print(type(plan_response))
+    
+        poses_arr = plan_response.plan.poses
+
+        print("Lengde: array ", len(poses_arr))
+
+        for poses in poses_arr:
+            print("hei")
+            print(poses)
 
         
 
