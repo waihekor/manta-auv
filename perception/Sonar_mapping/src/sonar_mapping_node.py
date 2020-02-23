@@ -13,12 +13,12 @@ from nav_msgs.msg import OccupancyGrid
 
 ############ Global variables, into YAML file in the future ###############
 # Visialusation
-GLOBAL_MAP = False
-LOCAL_MAP = False
-PUBLISH_GLOBAL_MAP = True 
+GLOBAL_MAP =False
+LOCAL_MAP = False 
+PUBLISH_GLOBAL_MAP = True
 PUBLISH_LOCAL_MAP = False
 WALL_WIDTH = 1
-SCALE = 10
+SCALE = 5
 ###########################################################################
 
 
@@ -67,9 +67,7 @@ class ROS_MAPPING:
          # If a map has to be published an msg must be initiated and a publisher has to be declared
         if PUBLISH_GLOBAL_MAP == True:
             self.map_msg = occupancy_gird_publisher.initiateMapMsg()
-            self.map_msg.header.frame_id = 'manta/odom'
-            self.pub = rospy.Publisher('map', OccupancyGrid, queue_size=10)
-            
+            self.pub = rospy.Publisher('manta/global_map', OccupancyGrid, queue_size=10)
         
         if PUBLISH_LOCAL_MAP == True:
             pass
