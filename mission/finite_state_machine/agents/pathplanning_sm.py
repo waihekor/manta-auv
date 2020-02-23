@@ -135,7 +135,7 @@ class TaskManager():
         self.psi = yaw
         
 
-
+    
 
     def serviceSetup(self):
 
@@ -180,7 +180,6 @@ class TaskManager():
         self.marker_arr = MarkerArray()
         
         id = 0
-
         for poses in poses_arr:
             id = id + 1
             marker = Marker()
@@ -196,9 +195,7 @@ class TaskManager():
             marker.color.g = 1.0
             marker.color.b = 0.0
             marker.pose.orientation.w = 1.0
-
             print(poses.pose.position)
-
             marker.pose.position.x = poses.pose.position.x
             marker.pose.position.y = poses.pose.position.y
             marker.pose.position.z = poses.pose.position.z
@@ -210,7 +207,6 @@ class TaskManager():
 
 """
     def drawMarkersTest(self):
-
         print("length of marker array: ", len(self.marker_arr.markers))
         self.marker_pub.publish(self.marker_arr)
 """
