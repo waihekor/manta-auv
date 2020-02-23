@@ -80,8 +80,7 @@ class TaskManager():
         self.sub_pose = rospy.Subscriber('/odometry/filtered', Odometry, self.positionCallback, queue_size=1)
         subscrib_map = rospy.Subscriber('/map', OccupancyGrid, self.mapCB, queue_size=1)
 
-        self.marker_pub = rospy.Publisher('/testing/markerArray', MarkerArray, queue_size=50)
-        self.drawMarkersTest()
+        #self.marker_pub = rospy.Publisher('/testing/markerArray', MarkerArray, queue_size=50)
 
 
         hsm = StateMachine(outcomes=['finished statemachine'])
@@ -134,21 +133,9 @@ class TaskManager():
         orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
         (roll,pitch,yaw) = euler_from_quaternion(orientation_list)
         self.psi = yaw
-
-        #test:
-        self.drawMarkersTest()
         
 
-    def get_grid_index(self, occ_map, manta_pos):
-        width = occ_map.info.width
-        height = occ_map.info.height
-        resolution = occ_map.info.resolution
-        origin = occ_map.info.origin.position
 
-        
-        
-        manta_grid_pos_x = manta_pos.pose.pose.position.x / resolution
-        manta_grid_pos_y = manta_pos.pose.pose.position.y / resolution
 
     def serviceSetup(self):
 
@@ -189,7 +176,7 @@ class TaskManager():
 
         print("Lengde: array ", len(poses_arr))
 
-
+        """
         self.marker_arr = MarkerArray()
         
         id = 0
@@ -216,16 +203,18 @@ class TaskManager():
             marker.pose.position.y = poses.pose.position.y
             marker.pose.position.z = poses.pose.position.z
             self.marker_arr.markers.append(marker)
-
+        """
         
             
             
 
-
+"""
     def drawMarkersTest(self):
 
         print("length of marker array: ", len(self.marker_arr.markers))
         self.marker_pub.publish(self.marker_arr)
+"""
+    
 
 
 

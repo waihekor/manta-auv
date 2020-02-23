@@ -38,6 +38,7 @@ def done_cb_state_machine(status, result):
 
 
     patrol = StateMachine([])
+    
 
     with patrol:
         StateMachine.add(   'CP1',
@@ -55,6 +56,8 @@ def done_cb_state_machine(status, result):
                             transitions = { 'succeeded': 'CP1',
                                             'aborted': 'CP2',
                                             'preempted': 'CP1'})
+
+        StateMachine.add()
 
     intro_server = IntrospectionServer(str(rospy.get_name()), patrol,'/SM_ROOT')
     intro_server.start()

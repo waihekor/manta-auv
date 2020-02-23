@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+
+
+   <node
+    name="test_controller_state_machine"
+    pkg="finite_state_machine"
+    type="test_controller_sm.py"
+    output="screen">
+   </node> 
+
+
+</launch>
