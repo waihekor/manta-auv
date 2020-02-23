@@ -12,46 +12,38 @@ class MapPublisher:
 
         ros_pack = RosPack()
         path_util = ros_pack.get_path('utilities')
-        print(path_util)
 
         pic_name = "test.jpg"
         abs_path = path_util + "/src/" + pic_name
-        print(abs_path)
 
-        img = cv2.imread(abs_path)
+        img = cv2.imread(abs_path, cv2.IMREAD_GRAYSCALE)
         if img is None:
             print("Could not open file")
 
-        print(type(img))
-        print(img)
-        
-
+        img_shape = img.shape
         self.map_msg = self.initiateMapMsg()
 
-
-        for i in range(500*500):   
-            self.map_msg.data[i] = 0
-            if i%105 is 0:
-                self.map_msg.data[i] = -1
-            elif i%300 is 0:
+        img_flatten = img.flatten()
+        print("flat:")
+        
+        for i in range(len(img_flatten)):
+            if img_flatten[i] == 0:
+                self.map_msg.data[i] = 0
+            else:
                 self.map_msg.data[i] = 100
 
-
-        print(self.map_msg.data[0])
-
-
-        self.map_pub_handle = rospy.Publisher('test/map', OccupancyGrid, queue_size=10)
+        self.map_pub_handle = rospy.Publisher('map', OccupancyGrid, queue_size=10)
 
 
 
-        rospy.Timer(rospy.Duration(1.0/10.0),self.publishMapCallback)
+        rospy.Timer(rospy.Duration(1.0/1.0),self.publishMapCallback)
 
         
 
     def initiateMapMsg(self):# written by Ambjorn Waldum
         map_msg = OccupancyGrid()
         map_msg.header.frame_id = 'manta/odom'
-        resolution = 1
+        resolution = 0.2
         width = 500
         height = 500
         map_msg.info.resolution = resolution
@@ -64,7 +56,7 @@ class MapPublisher:
         return map_msg
 
     def publishMapCallback(self, data):
-        print("Publishing map")
+        #print("Publishing map")
         self.map_pub_handle.publish(self.map_msg)
 
 
