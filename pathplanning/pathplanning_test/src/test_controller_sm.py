@@ -13,13 +13,15 @@ from geometry_msgs.msg import Pose, Point, Quaternion, PoseStamped, Wrench
 from nav_msgs.msg import OccupancyGrid, Odometry
 from nav_msgs.srv import GetPlan, GetMap
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
-from geometry_msgs.msg import Twist
+
 
 
 class TaskManager():
 
     def __init__(self):
 
+
+        print("Started node test_controller_state_machine")
 
         rospy.init_node('test_contr_state_machine', anonymous=False)
 
@@ -35,10 +37,11 @@ class TaskManager():
 
         self.vehicle_odom = Odometry()
         self.sub_pose = rospy.Subscriber('/odometry/filtered', Odometry, self.positionCallback, queue_size=1)
-        self.sub_cmd_vel = rospy.Subscriber('/cmd_vel', Twist, self.cmdvelCallback, queue_size=1)
         self.pub_thrust = rospy.Publisher('/manta/thruster_manager/input', Wrench, queue_size=1)
 
         self.serviceSetup()
+
+        self.findClosestPointIndex()
 
 
 
@@ -50,19 +53,6 @@ class TaskManager():
         rospy.loginfo("stopping the AUV...")
         rospy.sleep(10)
 
-    def cmdvelCallback(self, msg):
-        print(msg)
-        x_vel = msg.linear.x
-        y_vel = msg.linear.y
-        
-        z_twist = msg.angular.z
-
-        cmdWrench = Wrench()
-        cmdWrench.force.x = x_vel*60
-        cmdWrench.force.y = y_vel*120
-        cmdWrench.torque.z = z_twist*15
-
-        self.pub_thrust.publish(cmdWrench)
 
     
     def positionCallback(self, msg):
@@ -81,12 +71,22 @@ class TaskManager():
         self.pitch = pitch
         self.yaw = yaw
 
+        self.goForward()
 
     def goForward(self):
         testWrench = Wrench()
-        #testWrench.force.x = 30
+        testWrench.force.x = 30
         #testWrench.torque.z = 100
-        self.pub_thrust.publish(testWrench)
+        
+    def findClosestPointIndex(self):
+        distArray = []
+        
+        for pose in self.path:
+            distArray.append(abs(self.x-pose.pose.x)**2 + abs(self.y - pose.pose.y)**2)
+        print(len(distArray))
+        print("hei dist")
+        print(distArray[0])
+        print("dist")
 
     def serviceSetup(self):
 
@@ -104,8 +104,8 @@ class TaskManager():
         start.pose.position.z = 0
 
         goal.header.frame_id = "manta/odom"
-        goal.pose.position.x = -20
-        goal.pose.position.y = 3
+        goal.pose.position.x = 10
+        goal.pose.position.y = 10
         goal.pose.position.z = 0
 
         tolerance = 0
@@ -121,10 +121,9 @@ class TaskManager():
         print(type(plan_response))
     
         poses_arr = plan_response.plan.poses
-        self.path = poses_arr
 
         print("Lengde: array ", len(poses_arr))
-        print(poses_arr)
+        #print(poses_arr)
 
 
 if __name__ == '__main__':

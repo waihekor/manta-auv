@@ -11,6 +11,9 @@ import cv2
 
 class MANUAL_CALIBRATION:
 
+
+
+
     def calibrationCallback(self,data):
         # Get input from user
         calibration_misc.print_userface()
@@ -99,7 +102,8 @@ class MANUAL_CALIBRATION:
         rospy.Subscriber('manta/sonar',LaserScan,self.sonarCallback)
         rospy.Subscriber('manta/manta/camerafront/camera_image',Image,self.imageCallback)
         #rospy.Timer(rospy.Duration(1.0/10.0),self.visualisingCallback)
-        rospy.Timer(rospy.Duration(1.0/10.0),self.calibrationCallback)
+        rospy.Timer(rospy.Duration(1.0),self.calibrationCallback)
+        
 
 if __name__ == "__main__":
     rospy.init_node('camera_sonar_calibration',anonymous=True,disable_signals=True)

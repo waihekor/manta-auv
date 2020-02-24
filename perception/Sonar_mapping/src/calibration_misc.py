@@ -141,7 +141,7 @@ def get_pixel_width(image):
             bbox = cv2.boundingRect(contour)
        
     if bbox != -1:
-        pixel_width = bbox[0] + int((bbox[0]+bbox[2])/2)
+        pixel_width = (bbox[0] + int(bbox[0]+bbox[2]))/2
         ''' 
         # Visualising bounding box for troubleshooting purposes
         cv2.rectangle(image,(bbox[0],bbox[1]),(bbox[0]+bbox[2],bbox[1]+bbox[3]),(0,255,0), 3)  

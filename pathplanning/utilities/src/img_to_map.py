@@ -43,7 +43,7 @@ class MapPublisher:
     def initiateMapMsg(self):# written by Ambjorn Waldum
         map_msg = OccupancyGrid()
         map_msg.header.frame_id = 'manta/odom'
-        resolution = 0.2
+        resolution = 0.1
         width = 500
         height = 500
         map_msg.info.resolution = resolution

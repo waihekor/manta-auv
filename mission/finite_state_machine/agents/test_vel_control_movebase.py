@@ -21,6 +21,8 @@ class TaskManager():
     def __init__(self):
 
 
+        print("Started node test_controller_state_machine")
+
         rospy.init_node('test_contr_state_machine', anonymous=False)
 
         self.x = 0
@@ -52,18 +54,6 @@ class TaskManager():
 
     def cmdvelCallback(self, msg):
         print(msg)
-        x_vel = msg.linear.x
-        y_vel = msg.linear.y
-        
-        z_twist = msg.angular.z
-
-        cmdWrench = Wrench()
-        cmdWrench.force.x = x_vel*60
-        cmdWrench.force.y = y_vel*120
-        cmdWrench.torque.z = z_twist*15
-
-        self.pub_thrust.publish(cmdWrench)
-
     
     def positionCallback(self, msg):
         self.vehicle_odom = msg
@@ -81,6 +71,7 @@ class TaskManager():
         self.pitch = pitch
         self.yaw = yaw
 
+        self.goForward()
 
     def goForward(self):
         testWrench = Wrench()

@@ -26,7 +26,7 @@ def initiateMapMsg():
     return map_msg
 
 def publishGlobalMap(sonar_data,ekf_data,map,WALL_WIDTH,SCALE,map_msg):
-    map = mapping_functions.imageGlobalMap(sonar_data,ekf_data,map,WALL_WIDTH,SCALE)
+    map = mapping_functions.publishTheGlobalMap(sonar_data,ekf_data,map,WALL_WIDTH,SCALE)
     map_rotated = np.rot90(map)
     map_rotated = np.fliplr(map_rotated)
     
