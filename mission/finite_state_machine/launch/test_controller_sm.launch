@@ -9,5 +9,10 @@
     output="screen">
    </node> 
 
+  <include file="$(find utilities)/launch/publish_map_from_img.launch"/>
+
+  <include file="$(find pathplanning_launch)/launch/move_base.launch"/>
+
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find pathplanning_launch)/rviz/config_file_premade_map.rviz" />
 
 </launch>
