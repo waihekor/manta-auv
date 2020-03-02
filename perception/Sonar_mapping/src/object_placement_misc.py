@@ -1,5 +1,5 @@
 import math
-import misc
+import common
 from vortex_msgs.msg import ObjectPlacement
 import cv2
 import numpy as np
@@ -26,14 +26,9 @@ def find_pixel_placement(bbox):
         return list_of_class_and_pixel_values
 
 def calculate_bearing(bounding_boxes, a, b, c, d):
-    x_coordinates = (bounding_boxes[3],bounding_boxes[4])
-    print("Xbox = " + str(bounding_boxes[1]) + ", " + str(bounding_boxes[2]))
-    print("Ybox = " + str(bounding_boxes[3]) + ", " + str(bounding_boxes[4]))
+    x_coordinates = (bounding_boxes[1],bounding_boxes[2])
     max_bearing = find_sonar_pos(x_coordinates[0],a,b,c,d)
     min_bearing = find_sonar_pos(x_coordinates[1],a,b,c,d)
-    #print("Max bearing: " + str(max_bearing))
-    #print("Min bearing: " + str(min_bearing))
-    #print(x_coordinates)
     return (min_bearing,max_bearing)
 
 def calculate_depth(bearings, sonar_data):
@@ -48,32 +43,32 @@ def calculate_depth(bearings, sonar_data):
                 closest_scan = scan
         current_angle += angle_increment
     depth = list(filter(lambda a: a < closest_scan + 0.2,depth))
-    return sum(depth) / len(depth)
+    return sum(depth) / (len(depth))
 
 def calculate_map_coordinates(ekf_data, sonar_data, bearings, depth, width, height, scale):
     # Getting mantas current position and heading
     robot_x = -int(ekf_data.pose.pose.position.x)*scale + int(height/2.0)
     robot_y = -int(ekf_data.pose.pose.position.y)*scale + int(width/2.0)
+    manta_x = -(ekf_data.pose.pose.position.x)*scale + (height/2.0)
+    manta_y = -(ekf_data.pose.pose.position.y)*scale + (width/2.0)
     quat_yaw = ekf_data.pose.pose.orientation.z
     quat_pitch = ekf_data.pose.pose.orientation.y
     quat_roll = ekf_data.pose.pose.orientation.x
     quat_real = ekf_data.pose.pose.orientation.w
-    [ekf_yaw,ekf_pitch,ekf_roll] = misc.quaternion_to_euler(quat_roll, quat_pitch, quat_yaw, quat_real)
+    [ekf_yaw,ekf_pitch,ekf_roll] = common.quaternion_to_euler(quat_roll, quat_pitch, quat_yaw, quat_real)
 
     # Projecting point from the sonar onto a 2D-plane given range and angle of current ping
     bearing = (bearings[0]+bearings[1])/2.0
     scan_width = math.sin(bearing)*depth
-    scan_height = math.sqrt(pow(depth,2) - pow(scan_width,2))                                          #math.sqrt(pow(range,2) - pow(scan_width,2))
-    array_height = 1498 - int(scan_height*scale)
-    array_width = 499 - int(scan_width*scale)
+    scan_height = math.sqrt(pow(depth,2) - pow(scan_width,2))                                         #math.sqrt(pow(range,2) - pow(scan_width,2))
+    array_height = manta_x - (scan_height*scale)
+    array_width = manta_y - (scan_width*scale)
 
-
-    '''
     # Transforms ping from sonar_frame to auv_frame
-    point=np.array([[array_height], [array_width]])
+    point=np.array([[int(array_height)], [int(array_width)]])
     center=np.array([[robot_x], [robot_y]])
-    array_height,array_width = misc.rotatePointAroundCenter(point,center,ekf_yaw)
-    '''
+    array_height,array_width = common.rotatePointAroundCenter(point,center,ekf_yaw)
+
     return (array_height,array_width)
 
 # Extra functions for testing purposes

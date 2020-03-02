@@ -16,12 +16,10 @@ class LOCATION_OF_OBJECT:
     # Class functions
     def update(self,map_coordinates):
         if self.detected == True:
-            #if map_coordinates[0] < (self.x_pos+1) and  map_coordinates[0] > (self.x_pos-1):
-                #if map_coordinates[1] < (self.y_pos+1) and  map_coordinates[1] > (self.y_pos-1):
-                    #self.x_pos = (self.x_pos) * 0.9 + (map_coordinates[0]) * 0.1
-                    #self.y_pos = (self.y_pos) * 0.9 + (map_coordinates[1]) * 0.1
-            self.x_pos = map_coordinates[0]
-            self.y_pos = map_coordinates[1]
+            if map_coordinates[0] < (self.x_pos+3) and  map_coordinates[0] > (self.x_pos-3):
+                if map_coordinates[1] < (self.y_pos+3) and  map_coordinates[1] > (self.y_pos-3):
+                    self.x_pos = (self.x_pos) * 0.7 + (map_coordinates[0]) * 0.3
+                    self.y_pos = (self.y_pos) * 0.7 + (map_coordinates[1]) * 0.3
 
         elif self.detected == False:
             self.queue += 1
