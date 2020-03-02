@@ -13,6 +13,6 @@
 
   <include file="$(find pathplanning_launch)/launch/move_base.launch"/>
 
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find pathplanning_launch)/rviz/config_file_premade_map.rviz" />
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find pathplanning_launch)/rviz/config_file_test_controller.rviz" />
 
 </launch>
