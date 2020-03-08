@@ -38,8 +38,6 @@ class TaskManager():
         self.sub_cmd_vel = rospy.Subscriber('/cmd_vel', Twist, self.cmdvelCallback, queue_size=1)
         self.pub_thrust = rospy.Publisher('/manta/thruster_manager/input', Wrench, queue_size=1)
 
-        self.serviceSetup()
-
 
 
         print("Rospy spin")
@@ -58,9 +56,11 @@ class TaskManager():
         z_twist = msg.angular.z
 
         cmdWrench = Wrench()
-        cmdWrench.force.x = x_vel*60
-        cmdWrench.force.y = y_vel*120
+        cmdWrench.force.x = x_vel*100
+        cmdWrench.force.y = y_vel*100
         cmdWrench.torque.z = z_twist*15
+
+        print("Forcex: ", cmdWrench.force.x, " Forcey: ", cmdWrench.force.y, " Torquez: ", cmdWrench.torque.z)
 
         self.pub_thrust.publish(cmdWrench)
 
@@ -88,44 +88,7 @@ class TaskManager():
         #testWrench.torque.z = 100
         self.pub_thrust.publish(testWrench)
 
-    def serviceSetup(self):
-
-        rospy.sleep(2)
-        print("waiting for service")
-        rospy.wait_for_service('move_base_node/make_plan')
-        print("finished waiting for service")
-        get_plan = rospy.ServiceProxy('/move_base_node/make_plan', GetPlan)
-
-        start = PoseStamped()
-        goal = PoseStamped()
-        start.header.frame_id = "manta/odom"
-        start.pose.position.x = 0
-        start.pose.position.y = 0
-        start.pose.position.z = 0
-
-        goal.header.frame_id = "manta/odom"
-        goal.pose.position.x = -20
-        goal.pose.position.y = 3
-        goal.pose.position.z = 0
-
-        tolerance = 0
-
-        print("Start:")
-        print(start)
-        print("Goal: ")
-        print(goal)
-
-
-        plan_response = get_plan(start = start, goal = goal, tolerance = tolerance)
-        print("Plan response type: ")
-        print(type(plan_response))
-    
-        poses_arr = plan_response.plan.poses
-        self.path = poses_arr
-
-        print("Lengde: array ", len(poses_arr))
-        print(poses_arr)
-
+   
 
 if __name__ == '__main__':
 	try:

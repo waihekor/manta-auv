@@ -10,14 +10,12 @@ import object_class
 
 ################################################
 # Globale variabler
-WIDTH = 500
-HEIGHT = 500
-SCALE = 40
-
-a = 3.06443008067e-09
-b = -3.54408406896e-06
-c = -0.00103503863097
-d = 0.747743961106
+MAP_SIZE = rospy.get_param("MAP_SIZE",500)
+SCALE = rospy.get_param("/SCALE",5)
+a = rospy.get_param("/a",-100)
+b = rospy.get_param("/b",-100)
+c = rospy.get_param("/c",-100)
+d = rospy.get_param("/d",-100)
 ################################################
 
 
@@ -53,7 +51,7 @@ class OBJECT_PLACING:
         for objects in list_of_objects:
             bearings = object_placement_misc.calculate_bearing(objects,a,b,c,d)
             depth = object_placement_misc.calculate_depth(bearings,self.sonar_data)
-            map_coordinates = object_placement_misc.calculate_map_coordinates(self.ekf_data, self.sonar_data, bearings, depth, WIDTH, HEIGHT,SCALE)
+            map_coordinates = object_placement_misc.calculate_map_coordinates(self.ekf_data, self.sonar_data, bearings, depth, MAP_SIZE, MAP_SIZE,SCALE)
             if objects[0] == "bootlegger":
                 self.bootlegger.update(map_coordinates)
             elif objects[0] == "g-man":
@@ -97,6 +95,7 @@ class OBJECT_PLACING:
     def imageCallback(self,data):
         self.image = data
 
+    '''
     # Checks if the algorithm is able to calculate a position for a red object, only necesarry when testing
     def placeObjectCallback(self,data):
         try:
@@ -111,6 +110,7 @@ class OBJECT_PLACING:
         #        obj_pos_msg = object_placement_misc.find_object_position(bearing,depth,self.ekf_data,WIDTH,HEIGHT,SCALE,self.sonar_data)
         #        obj_pos_msg = object_placement_misc.place_objects_in_map(bearing,depth,self.ekf_data,WIDTH,HEIGHT,SCALE,self.sonar_data, self.bbox)
         #        self.pub.publish(obj_pos_msg)
+    '''
 
 #### INIT of node ##################################
 if __name__ == '__main__':

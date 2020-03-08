@@ -1,5 +1,4 @@
 import mapping_functions
-import misc
 import numpy as np
 import math
 from nav_msgs.msg import OccupancyGrid 
@@ -8,6 +7,7 @@ import rospy
 def publishCurrentScan():
     pass
 
+# Initiates a MapMsg with parameters from yaml file
 def initiateMapMsg():
      # Initiating map_msg, resolution, width and height should be feed in through a YAML file
     map_msg = OccupancyGrid()
@@ -25,23 +25,11 @@ def initiateMapMsg():
     map_msg.header.frame_id = "manta/odom"
     return map_msg
 
+# Fills in the data part of the msg and returns it 
 def publishGlobalMap(sonar_data,ekf_data,map,WALL_WIDTH,SCALE,map_msg):
     map = mapping_functions.publishTheGlobalMap(sonar_data,ekf_data,map,WALL_WIDTH,SCALE)
     map_rotated = np.rot90(map)
     map_rotated = np.fliplr(map_rotated)
-    
     map_grid = map_rotated.reshape(map.size,)*100
-    map_msg.data = list(np.round(map_grid))
-
-
-    '''
-    for i in range(250000):
-        if map.flat[i] == 0:
-            map_msg.data[i] = 100
-        elif map.flat[i] == 1:
-            map_msg.data[i] = -1
-        else:
-            map_msg.data[i] = 0
-    '''
-        
+    map_msg.data = list(np.round(map_grid))        
     return map, map_msg

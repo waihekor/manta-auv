@@ -1,0 +1,17 @@
+<launch>
+    <!--Loads the necesarry parameters to rosparam-->
+    <rosparam file="$(find Sonar_mapping)/config/config.yaml"/>
+
+    <!-- Launch the necesarry nodes to start sonar-->
+    <!-- TODO -->
+    
+    <!-- Launch mapping node -->
+    <node pkg="Sonar_mapping" type="sonar_mapping_node.py" name="sonar_mapping_node" output="screen"/>
+
+    <!-- Launch darknetROS -->
+    <!-- TODO -->
+
+    <!-- Launch object placement node -->
+     <node pkg="Sonar_mapping" type="object_placement.py" name="object_placement" output="screen"/>
+
+</launch>

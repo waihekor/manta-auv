@@ -10,8 +10,6 @@
     <rosparam file="$(find pathplanning_launch)/params/local_costmap_params.yaml" command="load" />
     <rosparam file="$(find pathplanning_launch)/params/global_costmap_params.yaml" command="load" />
     <rosparam file="$(find pathplanning_launch)/params/base_local_planner_params.yaml" command="load" />  
-    <rosparam file="$(find pathplanning_launch)/params/dwa_local_planner_params.yaml" command = "load"/>
-
     <param name="global_costmap/global_frame" value="manta/odom"/>
     <param name="global_costmap/robot_base_frame" value="manta/base_link"/>
     <param name="global_costmap/laser_scan_sensor/sensor_frame" value="manta/sonar_link"/>

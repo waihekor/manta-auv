@@ -1,0 +1,31 @@
+# This file is the only file that should be changed when using this pacakage. 
+# Change parameters to your prefrence
+
+# MODE ---------------------------------------------------------------------------------------------------------------------------------------------
+GLOBAL_MAP: True # If True displays a window with the global map
+LOCAL_MAP: False # If True displays a window with the local map
+PUBLISH_GLOBAL_MAP: False # If True publishes the global map as an occupancy grid on the /map topic
+
+# --------------------------------------------------------------------------------------------------------------------------------------------------
+
+# MAP PARAMETERS -----------------------------------------------------------------------------------------------------------------------------------
+MAP_SIZE: 500 # The map will be of size (MAP_SIZE,MAP_SIZE)
+WALL_WIDTH: 1 # Amount of pixels used to draw the wall in the visualisation
+SCALE : 10 # SCALE OF MAP 
+
+# --------------------------------------------------------------------------------------------------------------------------------------------------
+
+# OBJECT PLACEMENT PARAMETERS (HAVE TO USE DARKNETROS AND A YOLO NETTWORK) -------------------------------------------------------------------------
+# NB! Change ObjectPlacement.msg to your objects
+RUN_OBJECT_PLACEMENT: False # True if darknetRos is run 
+
+# CALIBRATION PARAMETERS
+a:  3.06443008067e-09
+b:  -3.54408406896e-06
+c: -0.00103503863097
+d: 0.747743961106
+
+# NAMES MUST CORESPOND TO NAMES IN DARKNETROS
+OBJECTS: ['bootlegger','gman','badge','tommygun']
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------

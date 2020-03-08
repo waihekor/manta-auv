@@ -11,9 +11,6 @@ import cv2
 
 class MANUAL_CALIBRATION:
 
-
-
-
     def calibrationCallback(self,data):
         # Get input from user
         calibration_misc.print_userface()
