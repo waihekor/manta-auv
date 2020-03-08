@@ -10,7 +10,7 @@ from smach_ros import SimpleActionState, MonitorState, IntrospectionServer
 import actionlib
 from actionlib_msgs.msg import GoalStatus
 from geometry_msgs.msg import Pose, Point, Quaternion, PoseStamped, Wrench
-from nav_msgs.msg import OccupancyGrid, Odometry
+from nav_msgs.msg import OccupancyGrid, Odometry, Path
 from nav_msgs.srv import GetPlan, GetMap
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
 from visualization_msgs.msg import Marker, MarkerArray
@@ -62,8 +62,20 @@ class PIDRegulator:
 class TaskManager():
 
     def __init__(self):
-        
+        print("Pid following global plan")
         rospy.sleep(3)
+
+        P_yaw = 25
+        I_yaw = 0
+        D_yaw = 10
+        sat_yaw = 15
+        self.PID_yaw = PIDRegulator(P_yaw,I_yaw,D_yaw,sat_yaw)  # p, i, d, sat
+
+        P_side = 20
+        I_side = 0
+        D_side = 10
+        sat_side = 5
+        self.PID_side = PIDRegulator(P_side, I_side, D_side, sat_side)
 
         print("Started node test_controller_state_machine")
 
@@ -78,73 +90,95 @@ class TaskManager():
         self.yaw = 0
 
         self.path = []
+        self.current_goal = PoseStamped()
+
+        self.sphere_of_acceptance = 0.2
+     
 
         self.vehicle_odom = Odometry()
+        self.sub_pose = rospy.Subscriber('/move_base_node/current_goal', PoseStamped, self.updateGoalCallback, queue_size=1)
         self.sub_pose = rospy.Subscriber('/odometry/filtered', Odometry, self.positionCallback, queue_size=1)
+        self.sub_pose = rospy.Subscriber('/move_base_node/TrajectoryPlannerROS/global_plan', Path, self.globPlanCallback, queue_size=2)
         self.pub_thrust = rospy.Publisher('/manta/thruster_manager/input', Wrench, queue_size=1)
         self.marker_pub = rospy.Publisher('/pathplanning/closest_pt', Marker, queue_size=1)
-        self.get_plan = rospy.ServiceProxy('/move_base_node/make_plan', GetPlan)
 
         rospy.sleep(3)
 
-        goal = PoseStamped()
-        goal.header.frame_id = "manta/odom"
-        goal.pose.position.x = 10
-        goal.pose.position.y = 10
-        goal.pose.position.z = 0
-        self.makePlanToGoal(goal)
-
-        self.switched_plan = False
         self.start_time = rospy.get_time()
-
-        P_yaw = 25
-        I_yaw = 0
-        D_yaw = 10
-        sat_yaw = 100
-        self.PID_yaw = PIDRegulator(P_yaw,I_yaw,D_yaw,sat_yaw)  # p, i, d, sat
-
-        P_side = 20
-        I_side = 0
-        D_side = 10
-        sat_side = 100
-        self.PID_side = PIDRegulator(P_side, I_side, D_side, sat_side)
-        
 
         print("Rospy spin")
         rospy.spin()
         print("Finished TaskManager")
     
-    def makeNewPlan(self):
-        if self.x > 2 and not self.switched_plan:
-            self.switched_plan = True
-            goal = PoseStamped()
-            goal.header.frame_id = "manta/odom"
-            goal.pose.position.x = 0
-            goal.pose.position.y = -9
-            goal.pose.position.z = 0
-            self.makePlanToGoal(goal)
-            
 
 
+    def globPlanCallback(self, msg):
+
+        self.path = msg.poses
+
+        distToGoal = self.distanceBetweenPoseAndSelf(self.current_goal.pose)
+        #print(distToGoal)
         
+        if (len(self.path) > 2):
+            if not self.withinSphereOfAcceptance():
+                self.controller()
+            else:
+                print("Goal reached")
+
+    def withinSphereOfAcceptance(self):
+        distToGoal = self.distanceBetweenPoseAndSelf(self.current_goal.pose)
+        return distToGoal < self.sphere_of_acceptance
+
+    def distanceBetweenPoseAndSelf(self, pose):
+        return abs(self.x-pose.position.x)**2 + abs(self.y - pose.position.y)**2
+
+    def distBetween2Poses(self, pose1, pose2):
+        return abs(pose1.position.x-pose2.position.x)**2 + abs(pose1.position.y-pose2.position.y)**2
+
+    def updateGoalCallback(self, msg):
+        self.current_goal = msg
+        print("goal updated:")
+        print(self.current_goal)
 
     def shutdown(self):
         rospy.loginfo("stopping the AUV...")
         rospy.sleep(10)
 
-    def findVectorSide(self, path_pos):
-        print("h")
+    def getCurvature(self, pose1, pose2, pose3):
+        side1 = self.distBetween2Poses(pose1,pose2)
+        side2 = self.distBetween2Poses(pose2,pose3)
+        side3 = self.distBetween2Poses(pose1, pose3)
+        a = pose1.position
+        b = pose2.position
+        c = pose3.position
+
+
+        area = (b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x)
+
+        curvature = 4*area/(side1*side2*side3)
+        print("Curvature: ", curvature)
+        return curvature
+
+    def isValidRange(self, index, length_list):
+        return index >= 0 and index < length_list
+
 
     def controller(self):
 
         index,closest_pt = self.findClosestPointIndex()
 
         yaw = self.getYawFrom2Pos(self.path[index].pose.position, self.path[index+1].pose.position)
+
+        curvature = 0
+
+        if self.isValidRange(index-1, len(self.path)) and self.isValidRange(index+1, len(self.path)): 
+            curvature = self.getCurvature(self.path[index-5].pose, self.path[index].pose, self.path[index+5].pose)
         
         testWrench = Wrench()
         force_x = 10 
         testWrench.force.x = force_x
         err_yaw = yaw - self.yaw
+
         if err_yaw > 3.14:
             err_yaw = err_yaw - 6.28
 
@@ -160,11 +194,22 @@ class TaskManager():
         err_side = dir_manta_frame[1]
 
 
-        testWrench.torque.z = self.PID_yaw.regulate(err_yaw, rospy.get_time())
-        force_y = self.PID_side.regulate(err_side, rospy.get_time())
-        testWrench.force.y = force_y
+        torque_z = self.PID_yaw.regulate(err_yaw, rospy.get_time())
+        
 
-        force_x = max(force_x - 10*abs(err_side) - 10*abs(err_yaw), 3)
+        if (err_yaw < 0.1):
+            curvature_gain = min(curvature/10, 4)
+            torque_z = torque_z + curvature_gain
+
+        force_y = self.PID_side.regulate(err_side, rospy.get_time())
+        
+
+        force_y = np.sign(force_y)*(max(abs(force_y) - 5*abs(err_yaw), 0))
+        force_x = max(force_x - 10*abs(err_side) - 50*abs(err_yaw), 0)
+
+        testWrench.force.y = force_y
+        testWrench.force.x = force_x
+        testWrench.torque.z = torque_z
         
         self.pub_thrust.publish(testWrench)
 
@@ -206,16 +251,6 @@ class TaskManager():
         self.pitch = pitch
         self.yaw = yaw
 
-        self.makeNewPlan()
-
-        if len(self.path) > 0:
-            self.controller()
-
-    def goForward(self):
-        testWrench = Wrench()
-        testWrench.force.x = 30
-        #testWrench.torque.z = 100
-        
     def findClosestPointIndex(self):
         distArray = []
         for pose in self.path:
@@ -224,59 +259,27 @@ class TaskManager():
         minIndex = np.argmin(distArray)
         closest_pt = self.path[minIndex].pose.position
 
-        marker = Marker()
-        marker.pose.position.x = closest_pt.x
-        marker.pose.position.y = closest_pt.y
-        marker.header.frame_id = "manta/odom"
-        marker.type = marker.SPHERE
-        marker.action = marker.ADD
-        marker.scale.x = 0.2
-        marker.scale.y = 0.2
-        marker.scale.z = 0.2
-        marker.color.a = 1.0
-        marker.color.r = 1.0
-        marker.color.g = 1.0
-        marker.color.b = 0.0
-        self.marker_pub.publish(marker)
+        self.drawMarker(closest_pt)
 
         return minIndex, closest_pt
         
-
-    def makePlanToGoal(self, goal):
-
-        print("waiting for service")
-        rospy.wait_for_service('move_base_node/make_plan')
-        print("finished waiting for service")
-        
-
-        start = PoseStamped()
-        
-        start.header.frame_id = "manta/odom"
-        start.pose.position.x = self.x
-        start.pose.position.y = self.y
-        start.pose.position.z = self.z
-
-
-        
-
-        tolerance = 0
-
-        print("Start:")
-        print(start)
-        print("Goal: ")
-        print(goal)
+    def drawMarker(self, position):
+        marker = Marker()
+        marker.pose.position.x = position.x
+        marker.pose.position.y = position.y
+        marker.header.frame_id = "manta/odom"
+        marker.type = marker.SPHERE
+        marker.action = marker.ADD
+        marker.scale.x = 0.1
+        marker.scale.y = 0.1
+        marker.scale.z = 0.1
+        marker.color.a = 1.0
+        marker.color.r = 1.0
+        marker.color.g = 0.0
+        marker.color.b = 0.0
+        self.marker_pub.publish(marker)
 
 
-        plan_response = self.get_plan(start = start, goal = goal, tolerance = tolerance)
-        print("Plan response type: ")
-        print(type(plan_response))
-    
-        poses_arr = plan_response.plan.poses
-
-        self.path = poses_arr
-
-        print("Lengde: array ", len(poses_arr))
-        #   print(poses_arr)
 
 
 if __name__ == '__main__':

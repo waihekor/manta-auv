@@ -56,8 +56,8 @@ class TaskManager():
         z_twist = msg.angular.z
 
         cmdWrench = Wrench()
-        cmdWrench.force.x = x_vel*100
-        cmdWrench.force.y = y_vel*100
+        cmdWrench.force.x = x_vel*20
+        cmdWrench.force.y = y_vel*20
         cmdWrench.torque.z = z_twist*15
 
         print("Forcex: ", cmdWrench.force.x, " Forcey: ", cmdWrench.force.y, " Torquez: ", cmdWrench.torque.z)
