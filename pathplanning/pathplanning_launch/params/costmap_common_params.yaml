@@ -11,7 +11,7 @@ transform_tolerance: 2.0
 obstacle_range: 3.5
 raytrace_range: 4.0
 
-footprint: [[-0.127, -0.127], [-0.18, 0.0], [-0.127, 0.127], [0.0, 0.18], [0.127, 0.127], [0.18, 0.0], [0.127, -0.127], [0.0, -0.18]]
+footprint: [[-0.3, -0.3], [-0.28, 0.0], [-0.3, 0.3], [0.0, 0.28], [0.3, 0.3], [0.28, 0.0], [0.33, -0.3], [0.0, -0.28]]
 #robot_radius: 0.18
 
 
@@ -24,11 +24,11 @@ plugins:
 footprint_padding: 0.03
 
 #Cost function parameters
-inflation_radius: 0.5
-cost_scaling_factor: 10.0
+inflation_radius: 0.3
+cost_scaling_factor: 15.0
 
 #The cost at which a cell is considered an obstacle when a map is read from the map_server
-lethal_cost_threshold: 50
+lethal_cost_threshold: 40
 
 
 #Configuration for the sensors that the costmap will use to update a map

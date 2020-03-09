@@ -11,9 +11,10 @@
     <param name="ymin" value="-15.0"/>
     <param name="xmax" value="15.0"/>
     <param name="ymax" value="15.0"/>
-    <param name="delta" value="0.2"/>
+    <param name="delta" value="0.1"/>
     <!--<remap from="manta/global_map" to="gmapping/map"/>
     <remap from="map" to="gmapping_map"/>-->
+    <param name="angularUpdate" value="0.1"/>
   </node>
 
 </launch>
