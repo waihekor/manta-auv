@@ -17,7 +17,7 @@ from geometry_msgs.msg import Wrench,Pose
 from tf.transformations import euler_from_quaternion
 
 #Object detection message Tupe
-from vortex_msgs.msg import CameraObjectInfo
+from darknet_ros_msgs.msg import BoundingBoxes
 
 #Controller
 from autopilot.autopilot import CameraPID
@@ -26,7 +26,7 @@ from autopilot.autopilot import CameraPID
 class SearchForTarget(State):
   def __init__(self, target):
     #TODO: LEGG TIL OUTPUTKEYS
-    State.__init__(self,outcomes=['found','unseen'],output_keys=[])
+    State.__init__(self,outcomes=['found','unseen'],output_keys=['obj_pos_x_output','search_output'])
 
     self.target = target
     self.search_timeout = 30.0
@@ -36,18 +36,8 @@ class SearchForTarget(State):
     self.CameraPID = CameraPID()
 
     #Decide which object is relevant
-    if target == 'gate':
-      self.sub_object = rospy.Subscriber('/gate_midpoint',CameraObjectInfo,self.objectDetectionCallback,queue_size=1)
-    elif target =='pole':
-      self.sub_object = rospy.Subscriber('/pole_midpoint',CameraObjectInfo,self.objectDetectionCallback,queue_size=1)
-    elif target =='bootlegger'
-      self.sub_object = rospy.Subscriber('/bootlegger_midpoint',CameraObjectInfo,self.objectDetectionCallback,queue_size=1)
-    elif target =='g-man'
-      self.sub_object = rospy.Subscriber('/gman_midpoint',CameraObjectInfo,self.objectDetectionCallback,queue_size=1)
-    elif target =='badge'
-      self.sub_object = rospy.Subscriber('/badge_midpoint',CameraObjectInfo,self.objectDetectionCallback,queue_size=1)
-    elif target =='tommy-gun'
-      self.sub_object = rospy.Subscriber('/tommygun_midpoint',CameraObjectInfo,self.objectDetectionCallback,queue_size=1)
+    self.sub_object = rospy.Subscriber('/darknet_ros/bounding_boxes',BoundingBoxes,self.objectDetectionCallback,queue_size=1)
+
 
     #Get own pose
     #TODO:trengs en positionCallback funksjon?
@@ -56,19 +46,35 @@ class SearchForTarget(State):
     self.pub_thust = rospy.Publisher('/manta/thruster_manager/input',Wrench,queue_size=1)
     self.thrust_msg = Wrench()
 
+
+    #TODO:skille på de forskjellige targetsene, Nå lese kun første
   def objectDetectionCallback(self,msg):
-    self.object_pos_x = msg.pos_x
-    self.object_pos_y = msg.pos_y
-    self.object_frame_x = msg.frame_height #Usikker på denne
-    #Ubrukt enda
-    self.object_conf = msg.confidence
-    #self.object_dist = msg.distance_to_pole
-    pass
+    self.object_pos_x = msg.bounding_boxes[0].xmid
+    self.object_pos_y = msg.bounding_boxes[0].ymid
+
+  def execute(self,userdata):
+    rospy.loginfo('Searching for '+self.target)
+
+    sleep(self.samlpling_time)
+    self.timer += self.samlpling_time
+
+    if self.object_pos_x >=0 and self.object_pos_y >= 0:
+      rospy.loginfo(self.target + 'found')
+      userdata.obj_pos_x_output = self.object_pos_x
+      userdata.search_output = 'found'
+      #self.task_status = 'passed'
+
+      return 'found'
+    else:
+      rospy.loginfo(self.target + 'not found')
+      userdata.obj_pos_x_output = self.object_pos_x
+      userdata.search_output = 'unseen'
+      return 'unseen'
 
 class TrackTarget(State):
   def __init__(self, search_target,search_area):
     #TODO:ADD INPUTKEYS
-    State.__init__(self,outcomes=['succeded','aborted','preempted'],input_keys=['search_input'])
+    State.__init__(self,outcomes=['succeded','aborted','preempted'],input_keys=['search_input',])
 
     #init controlelr
     self.CameraPID = CameraPID()
@@ -92,10 +98,6 @@ class TrackTarget(State):
 
     self.psi = yaw    
     
-    
-    pass
-    
-
   def alignWithTarget(self,object_frame_x,object_pos_x,search_input,object_conf):
     #Separate Controller keeping manta at 0.5 meter depth
     tau_heave = self.CameraPID.depthController(-0.5,self.manta_odom.pose.pose.position.z,self.time)
@@ -106,7 +108,7 @@ class TrackTarget(State):
 
     if search_input == 'found' and object_conf >=0.9: #Think object_conf is conf from object detection. 
       tau_sway = self.CameraPID.swayController(target_center_screen,object_pos_x,self.time)#sway towards center of screen
-      tau_speed = selc.CameraPID.speedController(0.1,self.manta_odom.twist.twist.linear.x,self.time) #move slowly forward
+      tau_speed = self.CameraPID.speedController(0.1,self.manta_odom.twist.twist.linear.x,self.time) #move slowly forward
       
       tau_heading = self.CameraPID.headingController(self.psi,self.psi,self.time)
 

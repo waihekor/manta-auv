@@ -12,10 +12,8 @@ rospy.init_node('simtest_fsm')
 
 patrol_sm = patrol_sequence([
     dp_move(0, 0),
-    los_move(4, 0),
-    dp_move(4,0),
-    los_move(1, 0),
-    dp_move(0, 0, yaw_rad=pi)
+    los_move(8, 2),
+    dp_move(8,2)
 ])
 
 try:
