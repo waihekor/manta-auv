@@ -94,8 +94,6 @@ class TaskManager():
         cmd_z_twist = msg.angular.z
 
         cmdWrench = Wrench()
-<<<<<<< HEAD
-
         PID_vel_x = PIDRegulator(45, 20, 0, np.Inf)
         PID_vel_y = PIDRegulator(30, 5, 0, np.Inf)
         PID_angvel_z = PIDRegulator(20, 10, 0, np.Inf)
@@ -110,11 +108,7 @@ class TaskManager():
         cmdWrench.force.x = PID_vel_x.regulate(vel_x_error,self.time)
         cmdWrench.force.y = PID_vel_y.regulate(vel_y_error, self.time)
         cmdWrench.torque.z = PID_angvel_z.regulate(angvel_z_error, self.time)
-=======
-        cmdWrench.force.x = x_vel*20
-        cmdWrench.force.y = y_vel*20
-        cmdWrench.torque.z = z_twist*15
->>>>>>> 90e954896bf923efe636a53a6dbc275deb2919fe
+
 
         print("Forcex: ", cmdWrench.force.x, " Forcey: ", cmdWrench.force.y, " Torquez: ", cmdWrench.torque.z)
 
