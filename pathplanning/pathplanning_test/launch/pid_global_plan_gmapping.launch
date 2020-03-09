@@ -3,13 +3,13 @@
     <include file="$(find los_guidance)/launch/los_backstepping_simulator.launch"/>
 
    <node
-    name="test_controller"
+    name="pid_global_plan"
     pkg="pathplanning_test"
-    type="test_controller_sm.py"
+    type="pid_global_plan.py"
     output="screen">
    </node> 
 
-  <include file="$(find utilities)/launch/publish_map_from_img.launch"/>
+  <include file="$(find pathplanning_launch)/launch/gmapping.launch"/>
 
   <include file="$(find pathplanning_launch)/launch/move_base.launch"/>
 
