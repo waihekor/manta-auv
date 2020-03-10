@@ -10,10 +10,10 @@
    </node> 
 
   <include file="$(find pathplanning_launch)/launch/gmapping.launch"/>
-
+	
   <include file="$(find pathplanning_launch)/launch/move_base.launch"/>
 
-  <include file="$(find pathplanning_launch)/launch/rrt_exploration.launch"/>
+  <include file="$(find pathplanning_launch)/launch/rrt_exploration.launch"/> 
 
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find pathplanning_launch)/rviz/config_file_premade_map.rviz" />
 
