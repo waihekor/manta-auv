@@ -1,11 +1,9 @@
 #!/usr/bin/env python
-
 import rospy
 import numpy as np
-
+import math
 from smach import State, StateMachine, Sequence
 from smach_ros import SimpleActionState, MonitorState, IntrospectionServer
-
 # action message
 import actionlib
 from actionlib_msgs.msg import GoalStatus
@@ -15,8 +13,10 @@ from nav_msgs.srv import GetPlan, GetMap
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
 from visualization_msgs.msg import Marker, MarkerArray
 #from autopilot.autopilot import AutopilotBackstepping, AutopilotPID
-
-
+import actionlib
+from vortex_msgs.msg import LosPathFollowingAction, LosPathFollowingGoal, LosPathFollowingResult, LosPathFollowingFeedback
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from autopilot.autopilot import AutopilotBackstepping, AutopilotPID
 
 class PIDRegulator:
     	""" A very basic 1D PID regulator """
@@ -61,6 +61,8 @@ class PIDRegulator:
 
 class TaskManager():
 
+
+
     def __init__(self):
         print("Pid following global plan")
         rospy.sleep(3)
@@ -77,7 +79,13 @@ class TaskManager():
         sat_side = 5
         self.PID_side = PIDRegulator(P_side, I_side, D_side, sat_side)
 
+        self.PID = AutopilotPID()
+
         print("Started node test_controller_state_machine")
+
+        self._feedback = LosPathFollowingFeedback()
+        self._result = LosPathFollowingResult()
+
 
         rospy.init_node('test_contr_state_machine', anonymous=False)
 
@@ -89,11 +97,18 @@ class TaskManager():
         self.pitch = 0
         self.yaw = 0
 
+        self.reached_goal = True
+
+        self.desired_depth = -0.5
+
         self.path = []
         self.current_goal = PoseStamped()
 
         self.sphere_of_acceptance = 0.2
-     
+
+        self.move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        self.move_base_client.wait_for_server()
+
 
         self.vehicle_odom = Odometry()
         self.sub_pose = rospy.Subscriber('/move_base_node/current_goal', PoseStamped, self.updateGoalCallback, queue_size=1)
@@ -107,33 +122,65 @@ class TaskManager():
         self.start_time = rospy.get_time()
 
         print("Rospy spin")
-        rospy.spin()
+
+        self.action_server = actionlib.SimpleActionServer(name='pid_global_plan_server', ActionSpec=LosPathFollowingAction, auto_start=False)
+        self.action_server.register_goal_callback(self.goalCB)
+        self.action_server.register_preempt_callback(self.preemptCB)
+        self.action_server.start()
+        
         print("Finished TaskManager")
     
+    def goalCB(self):
+        self.reached_goal = False
+        _goal = self.action_server.accept_new_goal()
+        self.sphere_of_acceptance = _goal.sphereOfAcceptance
+        self.desired_depth = _goal.desired_depth.z
+        self.moveBaseClient(_goal)
 
+        PRINT_GOAL = True
+
+        if PRINT_GOAL:
+            print("sphere of accpetance: ", self.sphere_of_acceptance)
+            print("desired depth: ", self.desired_depth)
+            print("target x: ", _goal.next_waypoint.x)
+            print("target y: ", _goal.next_waypoint.y)
+
+    def moveBaseClient(self, _goal):
+        mb_goal = MoveBaseGoal()
+        mb_goal.target_pose.header.frame_id = 'manta/odom'
+        mb_goal.target_pose.header.stamp = rospy.Time.now()
+        mb_goal.target_pose.pose.position.x = _goal.next_waypoint.x
+        mb_goal.target_pose.pose.position.y =  _goal.next_waypoint.y
+        mb_goal.target_pose.pose.orientation.w = 1.0
+
+
+
+        self.move_base_client.send_goal(mb_goal)
 
     def globPlanCallback(self, msg):
 
         self.path = msg.poses
 
         distToGoal = self.distanceBetweenPoseAndSelf(self.current_goal.pose)
-        #print(distToGoal)
+        print(distToGoal)
+
         
         if (len(self.path) > 2):
-            if not self.withinSphereOfAcceptance():
+            if not self.reached_goal:
                 self.controller()
             else:
-                print("Goal reached")
+                pass
+                #print("Goal reached")
 
     def withinSphereOfAcceptance(self):
         distToGoal = self.distanceBetweenPoseAndSelf(self.current_goal.pose)
         return distToGoal < self.sphere_of_acceptance
 
     def distanceBetweenPoseAndSelf(self, pose):
-        return abs(self.x-pose.position.x)**2 + abs(self.y - pose.position.y)**2
+        return np.sqrt((self.x-pose.position.x)**2 + abs(self.y - pose.position.y)**2)
 
     def distBetween2Poses(self, pose1, pose2):
-        return abs(pose1.position.x-pose2.position.x)**2 + abs(pose1.position.y-pose2.position.y)**2
+        return np.sqrt((pose1.position.x-pose2.position.x)**2 + abs(pose1.position.y-pose2.position.y)**2)
 
     def updateGoalCallback(self, msg):
         self.current_goal = msg
@@ -156,11 +203,39 @@ class TaskManager():
         area = (b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x)
 
         curvature = 4*area/(side1*side2*side3)
-        print("Curvature: ", curvature)
+        
         return curvature
 
     def isValidRange(self, index, length_list):
         return index >= 0 and index < length_list
+
+    def statusActionGoal(self):
+        print("status_action_goal ", self.withinSphereOfAcceptance())
+		# feedback
+        self._feedback = LosPathFollowingFeedback()
+        self._feedback.distanceToGoal = self.distanceBetweenPoseAndSelf(self.current_goal.pose)
+        self.action_server.publish_feedback(self._feedback)
+		# succeeded
+        if self.withinSphereOfAcceptance():
+            print("Within sphere of acceptance")
+            self._result.terminalSector = True
+            self.action_server.set_succeeded(self._result, text="goal completed")
+            self.reached_goal = True
+
+    def preemptCB(self):
+        if self.action_server.is_preempt_requested():
+            rospy.loginfo("Preempted requsted by global pid planner")
+            self.action_server.set_preempted()
+
+    def fixHeadingWrapping(self, err_yaw):
+
+        if err_yaw > math.pi:
+            err_yaw = err_yaw - 2*math.pi
+
+        if err_yaw < -math.pi:
+            err_yaw = err_yaw + 2*math.pi
+
+        return err_yaw
 
 
     def controller(self):
@@ -179,11 +254,7 @@ class TaskManager():
         testWrench.force.x = force_x
         err_yaw = yaw - self.yaw
 
-        if err_yaw > 3.14:
-            err_yaw = err_yaw - 6.28
-
-        if err_yaw < -3.14:
-            err_yaw = err_yaw + 6.28
+        err_yaw = self.fixHeadingWrapping(err_yaw)
 
         vec_toward_path = np.array([closest_pt.x - self.x, closest_pt.y - self.y])
         rot_mat = np.array([[np.cos(self.yaw), -np.sin(self.yaw)],[np.sin(self.yaw), np.cos(self.yaw)]])
@@ -210,10 +281,17 @@ class TaskManager():
         testWrench.force.y = force_y
         testWrench.force.x = force_x
         testWrench.torque.z = torque_z
+
+        tau_depth_hold = self.PID.depthController(self.desired_depth, self.z, rospy.get_time())
+        print("tau depth hold:", tau_depth_hold)
+        print("current depth: ", self.z)
+
+        testWrench.force.z = tau_depth_hold
         
         self.pub_thrust.publish(testWrench)
 
-        print_info = True
+        self.statusActionGoal()
+        print_info = False
         if print_info:
             print("contr")
             print("index: ", index, " closest_point:", closest_pt)
@@ -221,6 +299,7 @@ class TaskManager():
             print("Error yaw: ", err_yaw)
             print("Error side: ", err_side, "   x_component: ", dir_manta_frame[0])
             print("Force x: ", force_x, " Force y: ", force_y, "Torque z: ", testWrench.torque.z )
+            print("Curvature: ", curvature)
 
 
 
@@ -281,9 +360,9 @@ class TaskManager():
 
 
 
-
 if __name__ == '__main__':
 	try:
-		TaskManager()
+		controllerObj = TaskManager()
+		rospy.spin()
 	except rospy.ROSInterruptException:
-		rospy.loginfo("Pathplanning state machine has been finished")
+		pass
