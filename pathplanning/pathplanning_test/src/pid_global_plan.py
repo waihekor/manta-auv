@@ -59,7 +59,7 @@ class PIDRegulator:
 		return u
 
 
-class TaskManager():
+class PidGlobalPlan():
 
 
 
@@ -131,6 +131,10 @@ class TaskManager():
         print("Finished TaskManager")
     
     def goalCB(self):
+        """
+        Get a new goal from the action server
+        Update the goal and pass to the move_base action server
+        """
         self.reached_goal = False
         _goal = self.action_server.accept_new_goal()
         self.sphere_of_acceptance = _goal.sphereOfAcceptance
@@ -146,31 +150,20 @@ class TaskManager():
             print("target y: ", _goal.next_waypoint.y)
 
     def moveBaseClient(self, _goal):
+        """
+        Client for sending goal to move_base action server
+        """
         mb_goal = MoveBaseGoal()
         mb_goal.target_pose.header.frame_id = 'manta/odom'
         mb_goal.target_pose.header.stamp = rospy.Time.now()
         mb_goal.target_pose.pose.position.x = _goal.next_waypoint.x
         mb_goal.target_pose.pose.position.y =  _goal.next_waypoint.y
         mb_goal.target_pose.pose.orientation.w = 1.0
-
-
-
         self.move_base_client.send_goal(mb_goal)
 
     def globPlanCallback(self, msg):
-
         self.path = msg.poses
 
-        distToGoal = self.distanceBetweenPoseAndSelf(self.current_goal.pose)
-        print(distToGoal)
-
-        
-        if (len(self.path) > 2):
-            if not self.reached_goal:
-                self.controller()
-            else:
-                pass
-                #print("Goal reached")
 
     def withinSphereOfAcceptance(self):
         distToGoal = self.distanceBetweenPoseAndSelf(self.current_goal.pose)
@@ -302,10 +295,6 @@ class TaskManager():
             print("Curvature: ", curvature)
 
 
-
-
-
-
     def getYawFrom2Pos(self, pos1, pos2):
         if (pos2.x - pos1.x ) == 0:
             return 0
@@ -329,6 +318,13 @@ class TaskManager():
         self.roll = roll
         self.pitch = pitch
         self.yaw = yaw
+
+        if (len(self.path) > 2):
+            if not self.reached_goal:
+                self.controller()
+            else:
+                pass
+                #print("Goal reached")
 
     def findClosestPointIndex(self):
         distArray = []
@@ -362,7 +358,7 @@ class TaskManager():
 
 if __name__ == '__main__':
 	try:
-		controllerObj = TaskManager()
+		controllerObj = PidGlobalPlan()
 		rospy.spin()
 	except rospy.ROSInterruptException:
 		pass
